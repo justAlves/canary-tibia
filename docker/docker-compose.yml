@@ -1,40 +1,33 @@
 name: otbr
+
 services:
   database:
     image: mariadb:latest
     restart: unless-stopped
     env_file:
-      - '.env'
+      - .env
     networks:
       - canary-net
-    ports:
-      - '$MYSQL_PORT:3306'
     volumes:
-      - 'db-volume:/var/lib/mysql'
-      - ../schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - db-volume:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-
   server:
-    # cpuset: "0-4"
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
-      target: prod
+    image: ghcr.io/opentibiabr/canary:latest
     restart: unless-stopped
     env_file:
-      - '.env'
+      - .env
     networks:
       - canary-net
     ports:
-      - '$gameProtocolPort:$gameProtocolPort'
-      - '$statusProtocolPort:$statusProtocolPort'
+      - "7171:7171"
+      - "7172:7172"
     volumes:
-      - '../:/srv/canary'
+      - canary-data:/srv/canary/data
     depends_on:
       database:
         condition: service_healthy
@@ -43,10 +36,9 @@ services:
     image: opentibiabr/login-server:latest
     restart: unless-stopped
     ports:
-      - '$LOGIN_HTTP_PORT:$LOGIN_HTTP_PORT'
-      - '$LOGIN_GRPC_PORT:$LOGIN_GRPC_PORT'
+      - "8080:8080"
     env_file:
-      - '.env'
+      - .env
     networks:
       - canary-net
     depends_on:
@@ -55,6 +47,7 @@ services:
 
 volumes:
   db-volume:
+  canary-data:
 
 networks:
   canary-net:
